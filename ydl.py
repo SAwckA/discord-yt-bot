@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 
 import discord
 import yt_dlp as youtube_dl
@@ -43,4 +44,4 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data = data['entries'][0]
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options, executable='./ffmpeg'), data=data)

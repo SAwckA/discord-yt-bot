@@ -8,6 +8,8 @@ from discord.ext.commands.context import Context
 
 from ydl import YTDLSource
 
+# discord.opus.load_opus("libopus.so")
+
 intents = discord.Intents.default()
 intents.message_content = True
 

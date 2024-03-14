@@ -7,9 +7,9 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 discord-py = {extras = ["voice"], version = "^2.3.2"}
-ffmpeg-python = "^0.2.0"
+yt-dlp = "^2024.3.10"
 
 
 [build-system]
