@@ -28,6 +28,8 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/discord-yt-bot:latest
 
   deploy:
+    needs: build
+    depends_on:
     runs-on: ubuntu-latest
     steps:
       - name: Publish on server
