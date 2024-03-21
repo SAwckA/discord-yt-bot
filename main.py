@@ -8,12 +8,12 @@ from discord.ext.commands.context import Context
 
 from ydl import ytdl, YDLInfo
 
-# discord.opus.load_opus("libopus.so")
+GUILD_ID = int(os.getenv("GUILD_ID"))
 
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot('$', intents=intents)
+bot = commands.Bot('/', intents=intents)
 
 
 def default_embed_msg(title: str, description: str = None, url: str = None, footer: str = None):
@@ -105,16 +105,19 @@ class MusicPlayer:
 music_player = MusicPlayer()
 
 
-@bot.command()
-async def play(ctx: Context, url: str | None = discord.ext.commands.param(
-    default=None,
-    description='URL на трек для проигрывания, если не указан, то эквивалентно $resume'
-)):
+@bot.tree.command(
+    name='play',
+    description='Проигрывание музыки (Поддерживает только youtube)',
+    guild=discord.Object(GUILD_ID),
+)
+async def play(interaction: discord.Interaction, url: str | None = None):
     """
     Проигрывание музыки (Поддерживается только youtube)
     """
+    ctx = await bot.get_context(interaction)
+
     if url is None:
-        return await resume(ctx)
+        return await resume.callback(interaction)
     async with ctx.typing():
         if ctx.author.voice is None:
             return await ctx.send(embed=default_error_msg('You must join voice channel to play...'))
@@ -142,13 +145,17 @@ async def play(ctx: Context, url: str | None = discord.ext.commands.param(
         await music_player.add_music_by_url(ctx, url)
 
 
-@bot.command(aliases=['q'])
-async def queue(ctx: Context):
+@bot.tree.command(
+    name='queue',
+    description='Показывает очередь',
+    guild=discord.Object(GUILD_ID),
+)
+async def queue(interaction: discord.Interaction):
     """
     Отображение очереди
     """
-    if music_player.playing_now is None:
-        return await ctx.send(embed=default_error_msg('Queue is empty...'))
+    if music_player.queue is None or len(music_player.queue) == 0:
+        return await interaction.response.send_message(embed=default_error_msg('Queue is empty...'))
 
     msg = ''
     for i, v in enumerate(music_player.queue):
@@ -160,48 +167,59 @@ async def queue(ctx: Context):
         footer='Queue status',
     )
 
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
 
-@bot.command()
-async def pause(ctx: Context):
+@bot.tree.command(
+    name='pause',
+    description='Пауза, resume для продолжения',
+    guild=discord.Object(GUILD_ID),
+)
+async def pause(interaction: discord.Interaction):
     """
     Пауза, resume для продолжения
     """
     if music_player.vc is None or not music_player.vc.is_playing():
-        return await ctx.send(embed=default_error_msg('Nothing playing now...'))
+        return await interaction.response.send_message(embed=default_error_msg('Nothing playing now...'))
 
     music_player.vc.pause()
+    await interaction.response.send_message(embed=default_embed_msg('Paused...'))
 
 
-@bot.command()
-async def resume(ctx: Context):
+@bot.tree.command(
+    name='resume',
+    description='Возобновление воспроизведения, pause для остановки',
+    guild=discord.Object(GUILD_ID),
+)
+async def resume(interaction: discord.Interaction):
     """
     Возобновление воспроизведения, pause для остановки
     """
     if music_player.vc is None or not music_player.vc.is_paused():
-        return await ctx.send(embed=default_error_msg('Nothing playing now...'))
+        return await interaction.response.send_message(embed=default_error_msg('Nothing playing now...'))
 
     music_player.vc.resume()
+    await interaction.response.send_message(embed=default_embed_msg('Resumed...'))
 
 
-@bot.command()
-async def skip(ctx: Context, n: int | None = discord.ext.commands.param(
-    default=1,
-    description='Количество треков для пропуска'
-)):
+@bot.tree.command(
+    name='skip',
+    description='Пропуск текущего трека',
+    guild=discord.Object(GUILD_ID),
+)
+async def skip(interaction: discord.Interaction, n: int = 1):
     """
     Пропустить трек
     """
     if music_player.vc is None or not music_player.vc.is_playing():
-        return await ctx.send(embed=default_error_msg('Nothing playing now...'))
+        return await interaction.response.send_message(embed=default_error_msg('Nothing playing now...'))
 
     if n < 1:
-        return await ctx.send(embed=default_error_msg('Invalid number...'))
+        return await interaction.response.send_message(embed=default_error_msg('Invalid number...'))
 
     music_player.queue = music_player.queue[n-1:]
 
-    await ctx.send(embed=default_embed_msg(
+    await interaction.response.send_message(embed=default_embed_msg(
         title=music_player.playing_now.title,
         description=f'Skipped {n} tracks',
         url=music_player.playing_now.url
@@ -209,13 +227,19 @@ async def skip(ctx: Context, n: int | None = discord.ext.commands.param(
     music_player.vc.stop()
 
 
-@bot.hybrid_command()
-async def clear(ctx: Context):
+@bot.tree.command(
+    name='clear',
+    description='Очистка очереди',
+    guild=discord.Object(GUILD_ID),
+)
+async def clear(interaction: discord.Interaction):
     """
     Очистка очереди
     """
+    ctx = await bot.get_context(interaction)
+
     if music_player.vc is None or not music_player.vc.is_playing():
-        return await ctx.send(embed=default_error_msg('Nothing to clear...'))
+        return await interaction.response.send_message(embed=default_error_msg('Nothing to clear...'))
 
     if ctx.voice_client is not None:
         await ctx.voice_client.disconnect(force=True)
@@ -225,36 +249,46 @@ async def clear(ctx: Context):
 
     await music_player.vc.disconnect()
 
-    return await ctx.send(embed=default_embed_msg('Successfully cleared...'))
+    return await interaction.response.send_message(embed=default_embed_msg('Successfully cleared...'))
 
 
-@bot.command()
-async def reset(ctx: Context):
+@bot.tree.command(
+    name='reset',
+    description='Восстановление воспроизведения',
+    guild=discord.Object(GUILD_ID),
+)
+async def reset(interaction: discord.Interaction):
     """
     Восстановление воспроизведения
     """
     if music_player.vc is None:
-        return await ctx.send(embed=default_error_msg('Nothing to reset...'))
+        return await interaction.response.send_message(embed=default_error_msg('Nothing to reset...'))
 
     music_player.vc.pause()
     music_player.vc.resume()
 
-    return await ctx.send(embed=default_embed_msg('Reset'))
+    return await interaction.response.send_message(embed=default_embed_msg('Reseted...'))
 
 
-@bot.command()
-async def volume(ctx: Context, value: int | None = discord.ext.commands.param(
-    default=100,
-    description='Уровень громкости (0 - 100)'
-)):
+@bot.tree.command(
+    name='volume',
+    description='Установка громкости',
+    guild=discord.Object(GUILD_ID)
+)
+async def volume(interaction: discord.Interaction, value: int):
     """Установка громкости"""
     if music_player.vc is None or not music_player.vc.is_playing():
-        return await ctx.send(embed=default_error_msg('Nothing playing now...'))
+        return await interaction.response.send_message(embed=default_error_msg('Nothing playing now...'))
     if value < 0 or value > 200:
-        return await ctx.send(embed=default_error_msg('Invalid volume (must be 0 - 100)...'))
+        return await interaction.response.send_message(embed=default_error_msg('Invalid volume (must be 0 - 100)...'))
 
     music_player.volume = value / 100
-    await ctx.send(embed=default_embed_msg(f'Volume set to {value}%'))
+    await interaction.response.send_message(embed=default_embed_msg(f'Volume set to {value}%'))
+
+
+@bot.event
+async def on_ready():
+    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
 
 
 if __name__ == "__main__":

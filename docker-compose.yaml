@@ -7,3 +7,4 @@ services:
     restart: always
     environment:
       TOKEN: ${TOKEN}
+      GUILD_ID: 000000000000000000
