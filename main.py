@@ -253,13 +253,13 @@ async def clear(interaction: discord.Interaction):
 
 
 @bot.tree.command(
-    name='reset',
-    description='Восстановление воспроизведения',
+    name='fix',
+    description='Чинит, если что-то пошло не так',
     guild=discord.Object(GUILD_ID),
 )
-async def reset(interaction: discord.Interaction):
+async def fix(interaction: discord.Interaction):
     """
-    Восстановление воспроизведения
+    Чинит, если что-то пошло не так
     """
     if music_player.vc is None:
         return await interaction.response.send_message(embed=default_error_msg('Nothing to reset...'))
