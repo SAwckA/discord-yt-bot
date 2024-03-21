@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  bot:
+    build: .
+    image: sawcka/discord-yt-bot:latest
+    restart: always
+    environment:
+      TOKEN: ${TOKEN}

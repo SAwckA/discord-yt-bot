@@ -1,5 +1,5 @@
 import asyncio
-from pathlib import Path
+from typing import Optional
 
 import discord
 import yt_dlp as youtube_dl
@@ -11,7 +11,7 @@ ytdl_format_options = {
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
-    'ignoreerrors': False,
+    'ignoreerrors': True,
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
@@ -25,23 +25,38 @@ ffmpeg_options = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconne
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 
-class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
-        super().__init__(source, volume)
-
+class YDLInfo:
+    def __init__(self, data, volume, source, *, loop=None):
+        self.volume = volume
+        self.loop = loop
         self.data = data
+        self.source = source
 
         self.title = data.get('title')
         self.url = data.get('url')
 
     @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
+    async def from_url(cls, url, volume, loop=None):
         loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+
+        if data is None:
+            return None
 
         if 'entries' in data:
-            # take first item from a playlist
             data = data['entries'][0]
 
-        filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options, executable='./ffmpeg'), data=data)
+        source = data['url']
+
+        return cls(data, volume, source, loop=loop)
+
+    def init_source(self) -> discord.PCMVolumeTransformer:
+        return discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.source, **ffmpeg_options), volume=self.volume)
+
+
+if __name__ == '__main__':
+    info = ytdl.extract_info('https://www.youtube.com/playlist?list=PLWeovVmm5MxKMYXwuwi5sruDADb7WSLgX',
+                      download=False, process=False)
+
+    print(info)
+
