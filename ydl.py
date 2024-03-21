@@ -52,11 +52,3 @@ class YDLInfo:
 
     def init_source(self) -> discord.PCMVolumeTransformer:
         return discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.source, **ffmpeg_options), volume=self.volume)
-
-
-if __name__ == '__main__':
-    info = ytdl.extract_info('https://www.youtube.com/playlist?list=PLWeovVmm5MxKMYXwuwi5sruDADb7WSLgX',
-                      download=False, process=False)
-
-    print(info)
-
