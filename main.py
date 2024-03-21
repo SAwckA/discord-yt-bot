@@ -154,7 +154,7 @@ async def queue(interaction: discord.Interaction):
     """
     Отображение очереди
     """
-    if music_player.queue is None or len(music_player.queue) == 0:
+    if music_player.playing_now is None:
         return await interaction.response.send_message(embed=default_error_msg('Queue is empty...'))
 
     msg = ''
